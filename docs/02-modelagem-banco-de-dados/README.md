@@ -1,24 +1,18 @@
 # Capítulo 2: Modelagem do banco de dados
 
-Projeto: LoonieMind
-Status: em andamento
-Responsável: (nome)
-
 ## 1. Objetivo do capítulo
 
 Documentar o modelo de dados usado para armazenar o histórico localmente em SQLite.
 
-## 2. Diagramas
-
-Modelo conceitual:
+## 2. Modelo conceitual:
 
 ![Modelo conceitual](img/modelo-conceitual.jpeg)
 
-Modelo lógico:
+## 3. Modelo lógico:
 
 ![Modelo lógico](img/modelo-logico.jpeg)
 
-## 3. Relacionamentos
+## 4. Relacionamentos
 
 Uma empresa possui várias planilhas e recebe vários lançamentos.
 
@@ -27,39 +21,73 @@ Uma empresa possui várias planilhas e recebe vários lançamentos.
 | Empresas | (1,1) | Possui | Planilhas | (0,n) |
 | Empresas | (1,1) | Recebe | Lancamentos | (0,n) |
 
-## 4. Tabelas
+## 5. Tabelas
+
+O banco de dados SQLite tem três tabelas. Empresas é a tabela central: cada planilha importada e cada lançamento financeiro pertencem a uma empresa.
+
+Legenda da coluna Chave: PK é chave primária (identifica cada registro de forma única) e FK é chave estrangeira (aponta para o registro de outra tabela).
+
+Os exemplos são ilustrativos e servem só para facilitar o entendimento.
 
 ### Empresas
 
-| Campo | Tipo | Observação |
-|---|---|---|
-| id_empresa | INTEGER | Chave primária |
-| nome | VARCHAR | |
-| descricao | VARCHAR | |
+Guarda as empresas cujos dados financeiros são analisados pela aplicação.
+
+| Campo | Tipo | Chave | Para que serve | Exemplo |
+|---|---|---|---|---|
+| id_empresa | INTEGER | PK | Identificador único da empresa. É gerado automaticamente e usado pelas outras tabelas para ligar planilhas e lançamentos à empresa | 1 |
+| nome | VARCHAR | | Nome da empresa, usado para identificá-la na interface e nos resultados exportados | Padaria Exemplo |
+| descricao | VARCHAR | | Texto livre com informações sobre a empresa, como ramo de atividade e porte. Serve de contexto para quem usa a aplicação | Padaria de bairro com 5 funcionários |
 
 ### Planilhas
 
-| Campo | Tipo | Observação |
-|---|---|---|
-| id_planilha | INTEGER | Chave primária |
-| id_empresa | INTEGER | Chave estrangeira para Empresas |
-| nome | VARCHAR | |
-| file_url | VARCHAR | Local do arquivo importado |
-| data | DATE | |
-| tipo | INTEGER | |
+Registra cada arquivo Excel/CSV importado, para que se saiba de onde vieram os dados.
+
+| Campo | Tipo | Chave | Para que serve | Exemplo |
+|---|---|---|---|---|
+| id_planilha | INTEGER | PK | Identificador único da planilha importada | 10 |
+| id_empresa | INTEGER | FK para Empresas | Indica a qual empresa a planilha pertence. Uma empresa pode ter várias planilhas (ou nenhuma) | 1 |
+| nome | VARCHAR | | Nome da planilha, normalmente o nome do arquivo importado | fluxo_caixa_setembro.xlsx |
+| file_url | VARCHAR | | Caminho onde o arquivo importado fica guardado no computador. Permite reabrir ou reprocessar a planilha original | dados/importados/fluxo_caixa_setembro.xlsx |
+| data | DATE | | Data em que a planilha foi importada para a aplicação. Permite saber quando cada arquivo entrou no histórico | 2026-10-16 |
+| tipo | INTEGER | | Código do formato do arquivo importado (CSV, XLS ou XLSX). Define como a aplicação deve ler o arquivo. Os códigos estão na tabela "Formato do arquivo" abaixo | 1 |
 
 ### Lancamentos
 
-| Campo | Tipo | Observação |
-|---|---|---|
-| id_lancamento | INTEGER | Chave primária |
-| id_empresa | INTEGER | Chave estrangeira para Empresas |
-| descricao | VARCHAR | |
-| categoria | VARCHAR | |
-| valor | FLOAT | |
-| data | DATE | |
-| tipo | INTEGER | |
+Guarda cada movimentação financeira (receita ou despesa). É a tabela principal da aplicação: é com ela que o modelo treina, classifica e prevê o fluxo de caixa.
 
+| Campo | Tipo | Chave | Para que serve | Exemplo |
+|---|---|---|---|---|
+| id_lancamento | INTEGER | PK | Identificador único do lançamento | 205 |
+| id_empresa | INTEGER | FK para Empresas | Indica a qual empresa o lançamento pertence. Uma empresa pode ter vários lançamentos (ou nenhum) | 1 |
+| descricao | VARCHAR | | Texto que descreve a movimentação, como veio na planilha. O TF-IDF transforma esse texto em números para o modelo classificar o lançamento | Pagamento fornecedor de farinha |
+| categoria | VARCHAR | | Categoria financeira do lançamento, definida pela classificação automática ou informada na planilha. Também agrupa os gastos nos gráficos | Matéria-prima |
+| valor | FLOAT | | Valor monetário da movimentação, em reais. É sempre positivo: quem indica se o valor entra ou sai do caixa é o campo tipo | 1250.00 |
+| data | DATE | | Data em que a movimentação ocorreu. É a base das variáveis temporais usadas pela previsão do fluxo de caixa | 2026-09-14 |
+| tipo | INTEGER | | Código que indica se o lançamento é receita ou despesa. Como o valor é sempre positivo, é este campo que define se a movimentação entra ou sai do caixa. Os códigos estão na tabela "Tipo de lançamento" abaixo | 2 |
 
+### Tabelas de códigos
+
+Os campos tipo guardam um número inteiro. Estas tabelas dizem o que cada número significa. A aplicação deve usar sempre estes mesmos códigos, tanto ao gravar quanto ao ler os dados.
+
+#### Formato do arquivo (Planilhas.tipo)
+
+| Código | Formato | Extensão | Observação |
+|---|---|---|---|
+| 1 | CSV | .csv | Texto separado por vírgula ou ponto e vírgula |
+| 2 | Excel antigo | .xls | Formato anterior ao Excel 2007 |
+| 3 | Excel | .xlsx | Formato atual do Excel |
+
+#### Tipo de lançamento (Lancamentos.tipo)
+
+| Código | Tipo | Efeito no caixa | Exemplo |
+|---|---|---|---|
+| 1 | Receita | Entrada: aumenta o saldo | Venda de produtos |
+| 2 | Despesa | Saída: diminui o saldo | Pagamento de fornecedor |
+
+Regras de uso:
+
+- O campo valor é sempre positivo. O saldo do fluxo de caixa é a soma das receitas (código 1) menos a soma das despesas (código 2).
+- Para aceitar um novo formato de arquivo ou um novo tipo de lançamento, acrescente um novo código no fim da tabela, sem alterar os já existentes. Assim os dados antigos continuam válidos.
 
 [Voltar ao índice](../../README.md)

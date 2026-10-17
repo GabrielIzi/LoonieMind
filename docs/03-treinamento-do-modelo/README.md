@@ -1,9 +1,5 @@
 # Capítulo 3: Treinamento do modelo
 
-Projeto: LoonieMind
-Status: em andamento
-Responsável: (nome)
-
 ## 1. Objetivo do capítulo
 
 Documentar os dois modelos de aprendizado de máquina do projeto: a classificação financeira e a previsão financeira.

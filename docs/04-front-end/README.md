@@ -1,9 +1,5 @@
 # Capítulo 4: Front-end
 
-Projeto: LoonieMind
-Status: em andamento
-Responsável: (nome)
-
 ## 1. Objetivo do capítulo
 
 Documentar a interface da aplicação, que roda de forma local ou como interface web simples.

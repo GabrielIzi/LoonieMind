@@ -1,9 +1,5 @@
 # Capítulo 1: Prototipação
 
-Projeto: LoonieMind
-Status: em andamento
-Responsável: (nome)
-
 ## 1. Objetivo do capítulo
 
 Registrar como a aplicação deve se comportar para o usuário antes da implementação: telas, fluxo de uso e protótipos.

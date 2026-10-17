@@ -1,9 +1,5 @@
 # Capítulo 5: Back-end
 
-Projeto: LoonieMind
-Status: em andamento
-Responsável: (nome)
-
 ## 1. Objetivo do capítulo
 
 Documentar a lógica da aplicação: tratamento dos dados, classificação, previsão e armazenamento.
