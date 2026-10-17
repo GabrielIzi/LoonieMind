@@ -6,7 +6,7 @@ Aplicação de inteligência artificial para organizar movimentações financeir
 |---|---|
 | Disciplina | Inteligência Artificial, 2º semestre de 2026 |
 | Professor | Edson Ceroni |
-| Nome do grupo | LoonieMind) |
+| Nome do grupo | LoonieMind |
 | Status | Em desenvolvimento |
 | Repositório | https://github.com/GabrielIzi/LoonieMind |
 
