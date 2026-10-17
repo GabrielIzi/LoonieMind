@@ -61,10 +61,21 @@ Guarda cada movimentação financeira (receita ou despesa). É a tabela principa
 | id_lancamento | INTEGER | PK | Identificador único do lançamento | 205 |
 | id_empresa | INTEGER | FK para Empresas | Indica a qual empresa o lançamento pertence. Uma empresa pode ter vários lançamentos (ou nenhum) | 1 |
 | descricao | VARCHAR | | Texto que descreve a movimentação, como veio na planilha. O TF-IDF transforma esse texto em números para o modelo classificar o lançamento | Pagamento fornecedor de farinha |
-| categoria | VARCHAR | | Categoria financeira do lançamento, definida pela classificação automática ou informada na planilha. Também agrupa os gastos nos gráficos | Matéria-prima |
+| categoria | VARCHAR | | Categoria financeira do lançamento, definida pela classificação automática ou informada na planilha. Também agrupa os gastos nos gráficos. O campo é de texto, mas o modelo trabalha com a categoria em número (veja a observação abaixo) | Matéria-prima |
 | valor | FLOAT | | Valor monetário da movimentação, em reais. É sempre positivo: quem indica se o valor entra ou sai do caixa é o campo tipo | 1250.00 |
 | data | DATE | | Data em que a movimentação ocorreu. É a base das variáveis temporais usadas pela previsão do fluxo de caixa | 2026-09-14 |
 | tipo | INTEGER | | Código que indica se o lançamento é receita ou despesa. Como o valor é sempre positivo, é este campo que define se a movimentação entra ou sai do caixa. Os códigos estão na tabela "Tipo de lançamento" abaixo | 2 |
+
+### Observação: categoria em texto no banco e em número no modelo
+
+O modelo de classificação (LightGBM) trabalha com cada categoria representada por um número inteiro, enquanto o campo categoria da tabela Lancamentos é do tipo VARCHAR (texto). O grupo decidiu manter o campo como VARCHAR, sem alterar o banco de dados, porque números podem ser gravados normalmente em um campo de texto.
+
+Como isso funciona na prática:
+
+- **Dentro do modelo:** cada categoria tem um código numérico (por exemplo, 0 para Matéria-prima e 1 para Aluguel). Esse código existe só para o treinamento e para a previsão.
+- **No banco:** o campo categoria guarda texto. O SQLite trata um campo VARCHAR como texto, então um número gravado nele é guardado como texto (o número 3 vira "3").
+- **Na leitura:** o valor volta como texto. Antes de usá-lo como código no modelo, a aplicação precisa convertê-lo para número inteiro. Ao mostrar o resultado para o usuário, a aplicação converte o código de volta para o nome da categoria.
+- **Consistência:** a aplicação deve gravar sempre o mesmo tipo de informação no campo (o nome da categoria ou o seu código), em todas as importações e classificações. Misturar os dois impede o agrupamento correto nos gráficos.
 
 ### Tabelas de códigos
 

@@ -15,6 +15,18 @@ Documentar os dois modelos de aprendizado de máquina do projeto: a classificaç
 
 TF-IDF é uma técnica que transforma textos em números para que um modelo de Machine Learning consiga analisá-los. O Scikit-learn é a biblioteca que fornece a implementação do TF-IDF.
 
+### Como as categorias viram números
+
+O TF-IDF trabalha apenas com o texto da descrição de cada lançamento: é a entrada do modelo. A categoria é o que o modelo precisa prever, e o LightGBM representa cada categoria por um número inteiro.
+
+| Etapa | O que acontece |
+|---|---|
+| Entrada | O TF-IDF converte a descrição do lançamento em números |
+| Saída do modelo | O modelo prevê o código numérico da categoria |
+| Resultado | O código é convertido de volta para o nome da categoria |
+
+No banco de dados, o campo categoria da tabela Lancamentos continua sendo VARCHAR. Isso é possível porque o SQLite guarda números em campos de texto. Os detalhes e o cuidado com a conversão na leitura estão no capítulo 02.
+
 ## 3. Previsão financeira
 
 - Algoritmo: LightGBM Regressor
