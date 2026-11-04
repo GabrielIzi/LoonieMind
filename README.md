@@ -162,8 +162,8 @@ Dependências fixadas em `requirements-lock.txt`; ferramentas de teste em `requi
 
 | Sistema | Compatível | Versão testada |
 |---|---|---|
-| Windows | Validado localmente | x64; Python 3.12.1 |
-| Linux | A validar | CI configurada; não executada nesta entrega local |
+| Windows | Validado localmente | Windows 10 e 11 64-bit |
+| Linux | A validar | Linux Mint 22.3 - Xfce 64-bit  |
 | Android | Não | - |
 | iOS | Não | - |
 | Outros (macOS) | Não | - |
