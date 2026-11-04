@@ -83,8 +83,8 @@ node --check web/app.js
 | Felipe Silva Marcelino |
 | Guilherme de Quadros Wendler da Costa |
 | Gustavo Araujo |
-| Lucas Evangelista |
-| Rodrigo dos Anjos |
+| Lucas Emanuel|
+| Rodrigo Oliveira Anjos |
 
 ## Sumário
 
