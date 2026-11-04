@@ -1,20 +1,20 @@
 # Capítulo 2: Modelagem do banco de dados
 
-> Modelo original preservado como referência histórica. A v1 utiliza um banco operacional separado, com centavos inteiros, origem por importação, revisão, categorias e auditoria. O esquema atual e as diferenças estão em [Arquitetura operacional](../ARQUITETURA.md). O arquivo original vazio e seus diagramas não foram alterados.
+> Atualizado em 03/11/2026. Os diagramas abaixo são o modelo original e foram preservados como referência histórica. A aplicação usa um banco operacional separado (esquema v2, descrito na seção 5), que amplia o modelo original. O arquivo original, agora em `plataforma/database/LoonieMind.db`, continua vazio e inalterado.
 
 ## 1. Objetivo do capítulo
 
-Documentar o modelo de dados usado para armazenar o histórico localmente em SQLite.
+Documentar o modelo de dados usado para armazenar o histórico localmente em SQLite: primeiro o modelo original (conceitual e lógico) e depois o esquema operacional implementado.
 
-## 2. Modelo conceitual:
+## 2. Modelo conceitual (original)
 
 ![Modelo conceitual](img/modelo-conceitual.jpeg)
 
-## 3. Modelo lógico:
+## 3. Modelo lógico (original)
 
 ![Modelo lógico](img/modelo-logico.jpeg)
 
-## 4. Relacionamentos
+## 4. Relacionamentos (original)
 
 Uma empresa possui várias planilhas e recebe vários lançamentos.
 
@@ -23,84 +23,133 @@ Uma empresa possui várias planilhas e recebe vários lançamentos.
 | Empresas | (1,1) | Possui | Planilhas | (0,n) |
 | Empresas | (1,1) | Recebe | Lancamentos | (0,n) |
 
-## 5. Tabelas
+## 5. Esquema operacional (v2)
 
-O banco de dados SQLite tem três tabelas. Empresas é a tabela central: cada planilha importada e cada lançamento financeiro pertencem a uma empresa.
+O banco operacional fica em `data/looniemind.sqlite3` (pasta configurável por `LOONIEMIND_DATA_DIR`) e não é versionado no Git. O esquema é criado de forma idempotente em `looniemind/db.py`, registrado em `schema_migrations` e identificado por `PRAGMA user_version = 2`. As chaves estrangeiras ficam ativas em toda conexão.
 
-Legenda da coluna Chave: PK é chave primária (identifica cada registro de forma única) e FK é chave estrangeira (aponta para o registro de outra tabela).
+Legenda da coluna Chave: PK é chave primária e FK é chave estrangeira.
 
-Os exemplos são ilustrativos e servem só para facilitar o entendimento.
+### Tabelas
+
+| Tabela | Função |
+|---|---|
+| Empresas | Cada negócio acompanhado; todas as demais tabelas dependem dela |
+| Categorias | Categorias de receita e despesa de cada empresa |
+| Planilhas | Cada arquivo importado, com estado da importação |
+| Lancamentos | Cada movimentação financeira; tabela principal |
+| Auditoria | Registro das ações (importações, revisões, exclusões, treinos) |
+| schema_migrations | Versões do esquema já aplicadas |
 
 ### Empresas
 
-Guarda as empresas cujos dados financeiros são analisados pela aplicação.
+| Campo | Tipo | Chave | Para que serve |
+|---|---|---|---|
+| id_empresa | INTEGER | PK | Identificador da empresa |
+| nome | TEXT | | Nome exibido na interface e nos arquivos exportados |
+| descricao | TEXT | | Texto livre sobre a empresa |
+| saldo_inicial_centavos | INTEGER | | Saldo existente antes das movimentações da data de referência |
+| data_saldo | TEXT | | Data de referência do saldo inicial (ISO, AAAA-MM-DD) |
+| demo | INTEGER | | 1 para empresa de demonstração sintética |
+| revisao | INTEGER | | Contador incrementado a cada alteração; invalida a previsão em cache |
+| created_at, updated_at | TEXT | | Datas de criação e atualização (UTC) |
 
-| Campo | Tipo | Chave | Para que serve | Exemplo |
-|---|---|---|---|---|
-| id_empresa | INTEGER | PK | Identificador único da empresa. É gerado automaticamente e usado pelas outras tabelas para ligar planilhas e lançamentos à empresa | 1 |
-| nome | VARCHAR | | Nome da empresa, usado para identificá-la na interface e nos resultados exportados | Padaria Exemplo |
-| descricao | VARCHAR | | Texto livre com informações sobre a empresa, como ramo de atividade e porte. Serve de contexto para quem usa a aplicação | Padaria de bairro com 5 funcionários |
+### Categorias
+
+| Campo | Tipo | Chave | Para que serve |
+|---|---|---|---|
+| id_categoria | INTEGER | PK | Identificador |
+| id_empresa | INTEGER | FK para Empresas | Dono da categoria |
+| nome | TEXT | | Nome da categoria |
+| tipo | INTEGER | | 1 = receita, 2 = despesa. O trio empresa/nome/tipo é único |
+
+Categorias padrão: receitas (Vendas, Serviços, Outras receitas) e despesas (Fornecedores, Aluguel, Pessoal, Impostos, Marketing, Logística, Alimentação, Utilidades, Outras despesas).
 
 ### Planilhas
 
-Registra cada arquivo Excel/CSV importado, para que se saiba de onde vieram os dados.
+| Campo | Tipo | Chave | Para que serve |
+|---|---|---|---|
+| id_planilha | TEXT | PK | UUID interno do arquivo |
+| id_empresa | INTEGER | FK para Empresas | Empresa que recebeu o arquivo |
+| nome | TEXT | | Nome original do arquivo |
+| file_url | TEXT | | Caminho interno onde o original é guardado (sob UUID, nunca sob caminho informado pelo usuário) |
+| sha256 | TEXT | | Hash do conteúdo, usado para impedir reimportação |
+| aba | TEXT | | Aba importada (vazio em CSV) |
+| opcoes | TEXT | | Opções de mapeamento e normalização, em JSON |
+| status | TEXT | | `preview`, `confirmed` ou `undone` |
+| total_linhas, importados, rejeitados | INTEGER | | Contagens da importação |
+| created_at, updated_at | TEXT | | Datas (UTC) |
 
-| Campo | Tipo | Chave | Para que serve | Exemplo |
-|---|---|---|---|---|
-| id_planilha | INTEGER | PK | Identificador único da planilha importada | 10 |
-| id_empresa | INTEGER | FK para Empresas | Indica a qual empresa a planilha pertence. Uma empresa pode ter várias planilhas (ou nenhuma) | 1 |
-| nome | VARCHAR | | Nome da planilha, normalmente o nome do arquivo importado | fluxo_caixa_setembro.xlsx |
-| file_url | VARCHAR | | Caminho onde o arquivo importado fica guardado no computador. Permite reabrir ou reprocessar a planilha original | dados/importados/fluxo_caixa_setembro.xlsx |
-| data | DATE | | Data em que a planilha foi importada para a aplicação. Permite saber quando cada arquivo entrou no histórico | 2026-10-16 |
-| tipo | INTEGER | | Código do formato do arquivo importado (CSV, XLS ou XLSX). Define como a aplicação deve ler o arquivo. Os códigos estão na tabela "Formato do arquivo" abaixo | 1 |
+Um índice único parcial impede duas importações **confirmadas** da mesma empresa, arquivo (hash) e aba.
 
 ### Lancamentos
 
-Guarda cada movimentação financeira (receita ou despesa). É a tabela principal da aplicação: é com ela que o modelo treina, classifica e prevê o fluxo de caixa.
+| Campo | Tipo | Chave | Para que serve |
+|---|---|---|---|
+| id_lancamento | INTEGER | PK | Identificador |
+| id_empresa | INTEGER | FK para Empresas | Dono do lançamento |
+| id_planilha, linha_origem | TEXT, INTEGER | FK para Planilhas | Origem quando veio de importação; o par é único |
+| descricao | TEXT | | Descrição como veio na planilha; é a única entrada do classificador |
+| categoria | TEXT | | Categoria em texto (veja a observação abaixo). Padrão: "Sem categoria" |
+| valor_centavos | INTEGER | | Valor em centavos, sempre inteiro e positivo |
+| data | TEXT | | Data realizada (ISO, AAAA-MM-DD) |
+| tipo | INTEGER | | 1 = receita, 2 = despesa, vazio = pendente (fica fora dos totais) |
+| revisado | INTEGER | | 1 quando uma pessoa confirmou ou corrigiu |
+| origem, sugestao, original | TEXT | | Como o lançamento entrou, sugestão do sistema e dados originais antes de correções |
+| documento, contraparte, centro_custo, conta, forma_pagamento, competencia, observacoes, id_externo | TEXT | | Os oito campos complementares acrescentados no esquema v2 |
+| created_at, updated_at | TEXT | | Datas (UTC) |
 
-| Campo | Tipo | Chave | Para que serve | Exemplo |
-|---|---|---|---|---|
-| id_lancamento | INTEGER | PK | Identificador único do lançamento | 205 |
-| id_empresa | INTEGER | FK para Empresas | Indica a qual empresa o lançamento pertence. Uma empresa pode ter vários lançamentos (ou nenhum) | 1 |
-| descricao | VARCHAR | | Texto que descreve a movimentação, como veio na planilha. O TF-IDF transforma esse texto em números para o modelo classificar o lançamento | Pagamento fornecedor de farinha |
-| categoria | VARCHAR | | Categoria financeira do lançamento, definida pela classificação automática ou informada na planilha. Também agrupa os gastos nos gráficos. O campo é de texto, mas o modelo trabalha com a categoria em número (veja a observação abaixo) | Matéria-prima |
-| valor | FLOAT | | Valor monetário da movimentação, em reais. É sempre positivo: quem indica se o valor entra ou sai do caixa é o campo tipo | 1250.00 |
-| data | DATE | | Data em que a movimentação ocorreu. É a base das variáveis temporais usadas pela previsão do fluxo de caixa | 2026-09-14 |
-| tipo | INTEGER | | Código que indica se o lançamento é receita ou despesa. Como o valor é sempre positivo, é este campo que define se a movimentação entra ou sai do caixa. Os códigos estão na tabela "Tipo de lançamento" abaixo | 2 |
+### Auditoria
+
+| Campo | Tipo | Chave | Para que serve |
+|---|---|---|---|
+| id | INTEGER | PK | Identificador |
+| id_empresa | INTEGER | FK para Empresas | Empresa afetada |
+| acao, entidade, referencia | TEXT | | O que foi feito e sobre qual registro |
+| detalhes | TEXT | | Detalhes estruturados em JSON (inclui dados anteriores em correções) |
+| created_at | TEXT | | Data da ação (UTC) |
 
 ### Observação: categoria em texto no banco e em número no modelo
 
-O modelo de classificação (LightGBM) trabalha com cada categoria representada por um número inteiro, enquanto o campo categoria da tabela Lancamentos é do tipo VARCHAR (texto). O grupo decidiu manter o campo como VARCHAR, sem alterar o banco de dados, porque números podem ser gravados normalmente em um campo de texto.
+O campo `categoria` continua sendo texto (VARCHAR no modelo original, TEXT no SQLite), como decidido pelo grupo. O classificador trabalha internamente com códigos numéricos de classe, mas esses códigos pertencem ao artefato do modelo: são codificados e decodificados lá dentro, e o banco guarda sempre o **nome** da categoria. Assim não há mistura de nomes e códigos no mesmo campo, o que prejudicaria o agrupamento nos gráficos.
 
-Como isso funciona na prática:
-
-- **Dentro do modelo:** cada categoria tem um código numérico (por exemplo, 0 para Matéria-prima e 1 para Aluguel). Esse código existe só para o treinamento e para a previsão.
-- **No banco:** o campo categoria guarda texto. O SQLite trata um campo VARCHAR como texto, então um número gravado nele é guardado como texto (o número 3 vira "3").
-- **Na leitura:** o valor volta como texto. Antes de usá-lo como código no modelo, a aplicação precisa convertê-lo para número inteiro. Ao mostrar o resultado para o usuário, a aplicação converte o código de volta para o nome da categoria.
-- **Consistência:** a aplicação deve gravar sempre o mesmo tipo de informação no campo (o nome da categoria ou o seu código), em todas as importações e classificações. Misturar os dois impede o agrupamento correto nos gráficos.
-
-### Tabelas de códigos
-
-Os campos tipo guardam um número inteiro. Estas tabelas dizem o que cada número significa. A aplicação deve usar sempre estes mesmos códigos, tanto ao gravar quanto ao ler os dados.
-
-#### Formato do arquivo (Planilhas.tipo)
-
-| Código | Formato | Extensão | Observação |
-|---|---|---|---|
-| 1 | CSV | .csv | Texto separado por vírgula ou ponto e vírgula |
-| 2 | Excel antigo | .xls | Formato anterior ao Excel 2007 |
-| 3 | Excel | .xlsx | Formato atual do Excel |
-
-#### Tipo de lançamento (Lancamentos.tipo)
+### Tabela de códigos: tipo de lançamento (Lancamentos.tipo e Categorias.tipo)
 
 | Código | Tipo | Efeito no caixa | Exemplo |
 |---|---|---|---|
 | 1 | Receita | Entrada: aumenta o saldo | Venda de produtos |
 | 2 | Despesa | Saída: diminui o saldo | Pagamento de fornecedor |
+| vazio (NULL) | Pendente | Fica fora de receitas, despesas e saldo até a revisão | Valor positivo sem tipo informado |
 
 Regras de uso:
 
-- O campo valor é sempre positivo. O saldo do fluxo de caixa é a soma das receitas (código 1) menos a soma das despesas (código 2).
-- Para aceitar um novo formato de arquivo ou um novo tipo de lançamento, acrescente um novo código no fim da tabela, sem alterar os já existentes. Assim os dados antigos continuam válidos.
+- O valor é sempre positivo; quem define se entra ou sai do caixa é o tipo.
+- Saldo atual = saldo inicial + receitas − despesas realizadas desde a data de referência, inclusive.
+- Para aceitar um novo tipo, acrescente um código no fim da tabela sem alterar os existentes.
+
+## 6. Mudanças em relação ao modelo original
+
+| Item | Modelo original | Esquema operacional v2 |
+|---|---|---|
+| Valor | `valor` FLOAT, em reais | `valor_centavos` INTEGER, evitando erros de ponto flutuante |
+| Datas | DATE | TEXT em formato ISO; timestamps de auditoria em UTC |
+| Formato do arquivo | `Planilhas.tipo` com código 1 (CSV), 2 (XLS), 3 (XLSX) | Coluna não implementada; o formato é identificado pela extensão na leitura do arquivo |
+| Data de importação | `Planilhas.data` | `created_at` e `updated_at` |
+| Saldo | Não previsto | `saldo_inicial_centavos` e `data_saldo` em Empresas |
+| Revisão humana | Não prevista | `revisado`, `sugestao`, `original` em Lancamentos |
+| Auditoria e categorias | Não previstas | Tabelas Auditoria e Categorias |
+| Dados complementares | Não previstos | Oito campos adicionados na migração v1 para v2 |
+
+## 7. Migração e backup
+
+- Bancos v1 recebem os campos complementares na abertura; antes disso é feita uma cópia em `data/backups/antes-da-versao-2.sqlite3`.
+- O backup completo (ZIP) inclui todas as empresas, o banco e os arquivos originais; **não** inclui os modelos treinados, que devem ser treinados novamente após a restauração.
+- A restauração aceita backups v1 e v2, grava em uma pasta nova e não executa SQL vindo do arquivo recebido.
+
+Detalhes e justificativas: [Arquitetura operacional](../ARQUITETURA.md).
+
+## 8. Pontos em aberto
+
+- Não há suporte a contas individuais com saldo inicial próprio, parcelas ou vencimentos futuros.
+- O `ID externo` não é chave de deduplicação automática.
 
 [Voltar ao índice](../../README.md)

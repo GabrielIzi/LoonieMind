@@ -1,35 +1,62 @@
 # Capítulo 4: Front-end
 
-> Atualização de 27/10/2026: frontend completo implementado em `web/`, com HTML/CSS/JavaScript e gráficos SVG, servido pela API local. Substitui a proposta Streamlit/Matplotlib descrita abaixo, preservada como histórico. Telas: onboarding, dashboard, importação/prévia, lançamentos, classificação, previsão, exportação e empresas/auditoria. A [decisão e as adaptações visuais](../DECISOES-E-ESCOPO.md) e o [guia](../GUIA-DE-USO.md) descrevem o comportamento atual.
+> Atualizado em 03/11/2026. A proposta inicial usava Streamlit e Matplotlib; a versão 1.1 usa uma interface web própria, servida pela API local. A troca está justificada nas decisões D02 e D03 de [Decisões e escopo](../DECISOES-E-ESCOPO.md).
 
 ## 1. Objetivo do capítulo
 
-Documentar a interface da aplicação, que roda de forma local ou como interface web simples.
+Documentar a interface da aplicação, que roda localmente no navegador em `http://127.0.0.1:8765`.
 
 ## 2. Tecnologias
 
 | Tecnologia | Uso |
 |---|---|
-| Streamlit | Interface da aplicação |
-| Matplotlib | Gráficos do dashboard |
+| HTML, CSS e JavaScript (módulos ES nativos) | Toda a interface, sem etapa de build e sem Node para executar |
+| Gráficos SVG | Evolução do saldo, visão mensal, projeção e despesas por categoria, sem imagens remotas ou CDN |
+| FastAPI | Serve a interface e a API na mesma origem |
 
-## 3. Funcionalidades da interface
+## 3. Arquivos
 
-- Importar arquivos Excel/CSV
-- Visualizar os dados importados e a classificação dos lançamentos
-- Visualizar a previsão do fluxo de caixa
-- Mostrar os resultados em gráficos/dashboard
-- Exportar os resultados para Excel/CSV
+| Arquivo | Função |
+|---|---|
+| `web/index.html` | Estrutura da página e menu lateral |
+| `web/app.js` | Rotas por hash, telas, chamadas à API e ações do usuário |
+| `web/charts.js` | Gráficos SVG |
+| `web/icons.js` | Ícones |
+| `web/styles.css` | Estilos e responsividade |
+| `web/api.html`, `web/api-reference.js` | Referência da API servida localmente em `/api/docs` |
 
-## 4. Telas implementadas
+## 4. Funcionalidades da interface
 
-| Tela | Status | Observação |
-|---|---|---|
-| (nome da tela) | (status) | (observação) |
+- Cadastro de empresas, saldo de referência e categorias; alternância entre empresas sem misturar dados.
+- Importação em duas fases (prévia e confirmação), com histórico e opção de desfazer.
+- Lançamentos com busca, filtros, cadastro manual, edição e exclusão.
+- Classificação com sugestões, confirmação em lote e treinamento do modelo.
+- Dashboard com saldo consolidado, entradas/saídas/resultado, evolução diária, projeção de 30 dias, qualidade do histórico e alertas.
+- Previsão de 7, 30, 60 ou 90 dias.
+- Exportação em Excel/CSV, backup completo e download dos materiais do projeto.
 
-## 5. Pontos em aberto
+## 5. Telas implementadas
 
-- Definir a organização das páginas do Streamlit.
-- Definir os gráficos do dashboard.
+| Tela | Rota | Status | Observação |
+|---|---|---|---|
+| Dashboard | `#/dashboard` | Implementada | O saldo independe do filtro de período; a visão mensal usa sempre os últimos 6 meses |
+| Importação | `#/import` | Implementada | Até 10 MB, 10.000 linhas, 100 colunas e 30 abas |
+| Lançamentos | `#/transactions` | Implementada | Edições e exclusões vão para a auditoria |
+| Classificação | `#/classification` | Implementada | O score exibido não é calibrado |
+| Previsão de caixa | `#/forecast` | Implementada | Mostra método escolhido e erro de validação |
+| Exportação | `#/export` | Implementada | CSV com UTF-8 BOM, ponto e vírgula e decimais brasileiros |
+| Minha empresa | `#/settings` | Implementada | Inclui base ampliada de demonstração e histórico de alterações |
+
+## 6. Segurança e comportamento
+
+- Todo texto importado é escapado antes de montar o HTML.
+- O servidor aceita apenas Host `localhost`/`127.0.0.1` e recusa escritas de outra origem.
+- Atalhos: `/` foca a busca; `Esc` fecha o menu e o painel de alertas.
+- Verificada em desktop (1440 px) e em tela de 390 px, com menu móvel e sem rolagem horizontal do documento.
+
+## 7. Pontos em aberto
+
+- Não há registro de revisão de acessibilidade (leitores de tela, contraste).
+- Testes automatizados do front-end se limitam à checagem de sintaxe (`node --check`); não há testes de interface automatizados.
 
 [Voltar ao índice](../../README.md)

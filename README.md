@@ -51,7 +51,7 @@ Em Linux com Python 3.12 instalado, execute `sh iniciar.sh`. A validação local
 - [Validação da entrega](docs/VALIDACAO.md)
 - API local: `/api/docs`; contrato legível por ferramentas: `/api/openapi.json`.
 
-O banco operacional fica em `data/looniemind.sqlite3`, fora do Git. O arquivo `Database/LoonieMind.db` e os diagramas originais foram preservados como referência histórica. Dados reais não devem ser enviados ao repositório. A demonstração usa dados sintéticos e não comprova desempenho em empresas reais.
+O banco operacional fica em `data/looniemind.sqlite3`, fora do Git. O arquivo original `plataforma/database/LoonieMind.db` (antes em `Database/`) e os diagramas originais foram preservados como referência histórica. Dados reais não devem ser enviados ao repositório. A demonstração usa dados sintéticos e não comprova desempenho em empresas reais.
 
 ### Verificação para desenvolvimento
 
@@ -67,7 +67,7 @@ node --check web/app.js
 | Disciplina | Inteligência Artificial, 2º semestre de 2026 |
 | Professor | Edson Ceroni |
 | Nome do grupo | LoonieMind |
-| Status | v1 local implementada; evolução e validação registradas em docs |
+| Status | v1.1 local implementada (entrega de 28/10/2026, incorporada em 03/11/2026); evolução e validação registradas em docs |
 | Repositório | https://github.com/GabrielIzi/LoonieMind |
 
 ## Identificação
@@ -96,6 +96,9 @@ node --check web/app.js
 | Capítulo 04: Front-end | [docs/04-front-end](docs/04-front-end/README.md) |
 | Capítulo 05: Back-end | [docs/05-back-end](docs/05-back-end/README.md) |
 | Implementação operacional da v1 | [docs/ARQUITETURA.md](docs/ARQUITETURA.md) |
+| Guia de uso | [docs/GUIA-DE-USO.md](docs/GUIA-DE-USO.md) |
+| Manual do sistema e da IA | [docs/MANUAL-SISTEMA-E-IA.md](docs/MANUAL-SISTEMA-E-IA.md) |
+| Validação da entrega | [docs/VALIDACAO.md](docs/VALIDACAO.md) |
 | Mudança de escopo e decisões | [docs/DECISOES-E-ESCOPO.md](docs/DECISOES-E-ESCOPO.md) |
 
 ## 1. Objetivo do trabalho
